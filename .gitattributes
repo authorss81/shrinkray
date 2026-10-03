@@ -1,0 +1,30 @@
+# Force LF in the repository and in every checkout. Without this, a Windows
+# contributor's autocrlf setting rewrites native/*.sh with CRLF and the engine
+# build dies with "$'\r': command not found" on the runner.
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.dart text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.gradle text eol=lf
+*.kt text eol=lf
+*.xml text eol=lf
+*.plist text eol=lf
+*.cc text eol=lf
+*.h text eol=lf
+*.cmake text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.keystore binary
+*.jks binary
+*.so binary
+*.dll binary
+*.dylib binary
+*.a binary
