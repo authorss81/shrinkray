@@ -45,54 +45,50 @@ final class PxBindings {
 
   late final _pxVersion = _lib
       .lookupFunction<PxBuffer Function(), PxBuffer Function()>('px_version');
-  late final _pxBufferFree =
-      _lib.lookupFunction<ffi.Void Function(PxBuffer), void Function(PxBuffer)>(
+  late final _pxBufferFree = _lib
+      .lookupFunction<ffi.Void Function(PxBuffer), void Function(PxBuffer)>(
         'px_buffer_free',
       );
-  late final _pxStringFree =
-      _lib.lookupFunction<
+  late final _pxStringFree = _lib
+      .lookupFunction<
         ffi.Void Function(ffi.Pointer<ffi.Char>),
         void Function(ffi.Pointer<ffi.Char>)
       >('px_string_free');
-  late final _pxInspect =
-      _lib.lookupFunction<
+  late final _pxInspect = _lib
+      .lookupFunction<
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size),
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, int)
       >('px_inspect');
-  late final _pxExif =
-      _lib.lookupFunction<
+  late final _pxExif = _lib
+      .lookupFunction<
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size),
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, int)
       >('px_exif');
-  late final _pxPresets =
-      _lib.lookupFunction<PxBuffer Function(), PxBuffer Function()>(
-        'px_presets',
-      );
-  late final _pxProcess =
-      _lib.lookupFunction<
+  late final _pxPresets = _lib
+      .lookupFunction<PxBuffer Function(), PxBuffer Function()>('px_presets');
+  late final _pxProcess = _lib
+      .lookupFunction<
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size),
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, int)
       >('px_process');
-  late final _pxBatch =
-      _lib.lookupFunction<
+  late final _pxBatch = _lib
+      .lookupFunction<
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size),
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, int)
       >('px_batch');
-  late final _pxZip =
-      _lib.lookupFunction<
+  late final _pxZip = _lib
+      .lookupFunction<
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size),
         PxBuffer Function(ffi.Pointer<ffi.Uint8>, int)
       >('px_zip');
-  late final _pxCancelNew =
-      _lib.lookupFunction<ffi.Uint64 Function(), int Function()>(
-        'px_cancel_new',
-      );
-  late final _pxCancelTrigger =
-      _lib.lookupFunction<ffi.Bool Function(ffi.Uint64), bool Function(int)>(
+  late final _pxCancelNew = _lib
+      .lookupFunction<ffi.Uint64 Function(), int Function()>('px_cancel_new');
+  late final _pxCancelTrigger = _lib
+      .lookupFunction<ffi.Bool Function(ffi.Uint64), bool Function(int)>(
         'px_cancel_trigger',
       );
-  late final _pxCancelFree =
-      _lib.lookupFunction<ffi.Bool Function(ffi.Uint64), bool Function(int)>(
+  late final _pxCancelFree = _lib
+      .lookupFunction<ffi.Bool Function(ffi.Uint64), bool Function(int)>(
         'px_cancel_free',
       );
   late final _pxSelftestError = _lib

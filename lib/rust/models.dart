@@ -18,9 +18,8 @@ enum OutputFormat {
 
   String toJson() => name;
 
-  static OutputFormat fromJson(String value) => OutputFormat.values.byName(
-    value.toLowerCase(),
-  );
+  static OutputFormat fromJson(String value) =>
+      OutputFormat.values.byName(value.toLowerCase());
 }
 
 /// How the source image fills the requested box.
@@ -80,11 +79,9 @@ enum Orientation {
     Orientation.mirrorHorizontal => 'mirror_horizontal',
     Orientation.rotate180 => 'rotate180',
     Orientation.mirrorVertical => 'mirror_vertical',
-    Orientation.mirrorHorizontalRotate270 =>
-      'mirror_horizontal_rotate270',
+    Orientation.mirrorHorizontalRotate270 => 'mirror_horizontal_rotate270',
     Orientation.rotate90 => 'rotate90',
-    Orientation.mirrorHorizontalRotate90 =>
-      'mirror_horizontal_rotate90',
+    Orientation.mirrorHorizontalRotate90 => 'mirror_horizontal_rotate90',
     Orientation.rotate270 => 'rotate270',
   };
 }
@@ -473,8 +470,7 @@ abstract final class Requests {
 
   static String zip(List<BatchFile> files) => jsonEncode({
     'files': [
-      for (final f in files)
-        {'name': f.name, 'bytes': f.bytes},
+      for (final f in files) {'name': f.name, 'bytes': f.bytes},
     ],
   });
 }

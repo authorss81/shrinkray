@@ -130,7 +130,10 @@ void main() {
         error: error,
       );
       final report = BatchReport(
-        outcomes: [outcome(error: null), outcome(error: 'broken')],
+        outcomes: [
+          outcome(error: null),
+          outcome(error: 'broken'),
+        ],
         cancelled: false,
       );
       expect(report.succeeded, 1);

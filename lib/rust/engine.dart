@@ -49,8 +49,7 @@ ffi.DynamicLibrary loadEngineLibrary() {
 final class PixelSmithEngine {
   /// Engine version and capabilities. Use as a smoke test that the app linked
   /// the library it expected rather than a stale copy.
-  Future<Capabilities> version() =>
-      Isolate.run(() => _versionStatic());
+  Future<Capabilities> version() => Isolate.run(() => _versionStatic());
 
   /// Inspect a file's header without decoding pixels. Rejects a hostile file
   /// before a pixel buffer is allocated.
@@ -62,8 +61,7 @@ final class PixelSmithEngine {
       Isolate.run(() => _exifStatic(bytes));
 
   /// The preset catalogue.
-  Future<List<Preset>> presets() =>
-      Isolate.run(() => _presetsStatic());
+  Future<List<Preset>> presets() => Isolate.run(() => _presetsStatic());
 
   /// Process one image.
   Future<ProcessResult> process({
@@ -145,7 +143,9 @@ ValidateReport _inspectStatic(List<int> bytes) {
   final px = PxBindings(loadEngineLibrary());
   final ptr = _copyToNative(bytes);
   try {
-    return ValidateReport.fromJson(_takeJson(px, px.inspect(ptr, bytes.length)));
+    return ValidateReport.fromJson(
+      _takeJson(px, px.inspect(ptr, bytes.length)),
+    );
   } finally {
     _freeNative(ptr);
   }
@@ -173,7 +173,9 @@ ProcessResult _processStatic(String request) {
   final px = PxBindings(loadEngineLibrary());
   final ptr = _copyToNative(utf8.encode(request));
   try {
-    return ProcessResult.fromJson(_takeJson(px, px.process(ptr, request.length)));
+    return ProcessResult.fromJson(
+      _takeJson(px, px.process(ptr, request.length)),
+    );
   } finally {
     _freeNative(ptr);
   }
@@ -251,9 +253,8 @@ Object? _takeDecoded(PxBindings px, PxBuffer buffer) {
   }
 }
 
-String _readError(PxBuffer buffer) => buffer.error == ffi.nullptr
-    ? ''
-    : buffer.error.cast<Utf8>().toDartString();
+String _readError(PxBuffer buffer) =>
+    buffer.error == ffi.nullptr ? '' : buffer.error.cast<Utf8>().toDartString();
 
 /// Copies bytes into native memory. The caller must free with [_freeNative].
 ffi.Pointer<ffi.Uint8> _copyToNative(List<int> bytes) {
