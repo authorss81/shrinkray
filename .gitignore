@@ -1,0 +1,38 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+android/.gradle/
+android/local.properties
+ios/Pods/
+ios/.symlinks/
+macos/Pods/
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+**/GeneratedPluginRegistrant.*
+*.iml
+
+# Native engine artefacts built by native/build-engine.sh.
+# These are produced, never committed; CI rebuilds them every run.
+src/rust/jniLibs/
+src/rust/*.so
+src/rust/*.dll
+src/rust/*.dylib
+src/rust/*.a
+android/app/src/main/jniLibs/
+
+# The engine source this app links against lives in the PixelSmith repository.
+# CI clones it explicitly (see .github/workflows/build.yml). A local checkout
+# next to this directory is picked up by native/build-engine.sh automatically.
+engine/
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.swp
