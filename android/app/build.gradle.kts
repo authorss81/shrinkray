@@ -6,7 +6,15 @@ plugins {
 
 android {
     namespace = "dev.pixelsmith.shrinkray"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned to 36 rather than `flutter.compileSdkVersion`.
+    //
+    // `flutter_plugin_android_lifecycle`, which `file_picker` pulls in, declares
+    // that it needs callers to compile against API 36. Flutter's own default has
+    // been 34, so the AAR metadata check fails with a message about a transitive
+    // dependency rather than about this app - which reads like a plugin bug and
+    // is not one. Pinned explicitly so the requirement is visible here, where it
+    // can be raised deliberately when a plugin needs more.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
