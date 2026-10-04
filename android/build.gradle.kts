@@ -24,12 +24,21 @@ subprojects {
 // `checkReleaseAarMetadata` before the app is even considered. The message names
 // the plugin, not this app, which makes it look like an upstream bug.
 //
-// 36 is the highest API any current dependency needs. Lowering it will re-break
-// the same check; raising it is the correct move when a future plugin asks.
+// `afterEvaluate` rather than `plugins.withId`: a `withId` callback runs the
+// moment the plugin is applied, which is *before* the module's own build script
+// reaches its `android { compileSdk = ... }` line. Setting the value there works
+// and is then silently overwritten, which is what run 37200193147 showed -
+// ":file_picker is currently compiled against android-34" despite the override.
+//
+// 36 is the highest API any current dependency needs. Lowering it re-breaks the
+// same check; raising it is the move when a future plugin asks for more.
 subprojects {
-    plugins.withId("com.android.library") {
-        extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
-            compileSdk = 36
+    afterEvaluate {
+        extensions.findByName("android")?.let { extension ->
+            when (extension) {
+                is com.android.build.gradle.LibraryExtension -> extension.compileSdk = 36
+                is com.android.build.gradle.AppExtension -> extension.compileSdk = 36
+            }
         }
     }
 }
