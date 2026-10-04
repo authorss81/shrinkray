@@ -33,6 +33,47 @@ ffi.DynamicLibrary loadEngineLibrary() {
   return ffi.DynamicLibrary.open('libpixelsmith_core.so');
 }
 
+/// The operations the engine offers, as an interface.
+///
+/// Separate from [PixelSmithEngine] so tests can supply their own implementation
+/// without weakening the real one. `PixelSmithEngine` is `final` on purpose: it
+/// owns every native buffer it receives and frees it in a `finally`, and a
+/// subclass that overrode a method could skip that. Making it non-final to enable
+/// mocking would trade a real safety property for test convenience.
+///
+/// The interface is what the app depends on, so a fake can be injected without
+/// the ownership rules becoming optional.
+abstract interface class PixelSmithEngineApi {
+  Future<Capabilities> version();
+  Future<ValidateReport> inspect(List<int> bytes, {bool mobileLimits = false});
+  Future<ExifInfo> exif(List<int> bytes);
+  Future<List<Preset>> presets();
+  Future<ProcessResult> process({
+    required Pipeline pipeline,
+    required OutputFormat format,
+    required List<int> imageBytes,
+    required String name,
+    int quality,
+    int? targetBytes,
+    bool? stripMetadata,
+    bool mobileLimits,
+  });
+  Future<BatchReport> batch({
+    required Pipeline pipeline,
+    required OutputFormat format,
+    required List<BatchFile> files,
+    int quality,
+    int? targetBytes,
+    int? cancelHandle,
+    bool mobileLimits,
+  });
+  Future<List<int>> zip(List<BatchFile> files);
+  Future<AbiLayout> abiLayout();
+  Future<int> cancelNew();
+  Future<bool> cancelTrigger(int handle);
+  Future<bool> cancelFree(int handle);
+}
+
 /// The safe wrapper around every `px_*` entry point.
 ///
 /// Rules, enforced here rather than trusted to callers:
@@ -46,9 +87,10 @@ ffi.DynamicLibrary loadEngineLibrary() {
 ///   worker isolate wants.
 /// - Failures become typed exceptions carrying the engine's message, never a
 ///   null, never a crash.
-final class PixelSmithEngine {
+final class PixelSmithEngine implements PixelSmithEngineApi {
   /// Engine version and capabilities. Use as a smoke test that the app linked
   /// the library it expected rather than a stale copy.
+  @override
   Future<Capabilities> version() => Isolate.run(() => _versionStatic());
 
   /// Inspect a file's header without decoding pixels. Rejects a hostile file
@@ -57,6 +99,7 @@ final class PixelSmithEngine {
   /// [mobileLimits] picks the tighter phone profile. The app sets it from the
   /// device rather than hard-coding it, so a tablet is not held to a phone's
   /// ceiling.
+  @override
   Future<ValidateReport> inspect(List<int> bytes, {bool mobileLimits = false}) =>
       Isolate.run(() => _inspectStatic((bytes: bytes, mobileLimits: mobileLimits)));
 
@@ -65,16 +108,20 @@ final class PixelSmithEngine {
   /// The contract test compares this against the Dart struct declaration. If the
   /// engine on disk is a different build from the bindings in the app, this is
   /// where that shows up instead of as corrupted memory at the first decode.
+  @override
   Future<AbiLayout> abiLayout() => Isolate.run(() => _abiLayoutStatic());
 
   /// Full EXIF read.
+  @override
   Future<ExifInfo> exif(List<int> bytes) =>
       Isolate.run(() => _exifStatic(bytes));
 
   /// The preset catalogue.
+  @override
   Future<List<Preset>> presets() => Isolate.run(() => _presetsStatic());
 
   /// Process one image.
+  @override
   Future<ProcessResult> process({
     required Pipeline pipeline,
     required OutputFormat format,
@@ -100,6 +147,7 @@ final class PixelSmithEngine {
 
   /// Run a batch. Always returns a report, never throws for per-file failures;
   /// one unreadable file must not discard the other 199.
+  @override
   Future<BatchReport> batch({
     required Pipeline pipeline,
     required OutputFormat format,
@@ -122,19 +170,23 @@ final class PixelSmithEngine {
   }
 
   /// Build a ZIP from already-processed outputs.
+  @override
   Future<List<int>> zip(List<BatchFile> files) {
     final request = Requests.zip(files);
     return Isolate.run(() => _zipStatic(request));
   }
 
   /// Create a cancellation token. Returns 0 on failure.
+  @override
   Future<int> cancelNew() => Isolate.run(() => _cancelNewStatic());
 
   /// Flip a cancellation token.
+  @override
   Future<bool> cancelTrigger(int handle) =>
       Isolate.run(() => _cancelTriggerStatic(handle));
 
   /// Drop a cancellation token.
+  @override
   Future<bool> cancelFree(int handle) =>
       Isolate.run(() => _cancelFreeStatic(handle));
 }
@@ -287,3 +339,4 @@ ffi.Pointer<ffi.Uint8> _copyToNative(List<int> bytes) {
 }
 
 void _freeNative(ffi.Pointer<ffi.Uint8> ptr) => calloc.free(ptr);
+

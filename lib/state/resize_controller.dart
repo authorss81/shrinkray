@@ -75,10 +75,10 @@ enum ExportPhase { idle, running, done, failed, cancelled }
 /// The engine call itself is injected as [engine] so widget tests can drive the
 /// whole flow without loading a native library.
 final class ResizeController extends ChangeNotifier {
-  ResizeController({PixelSmithEngine? engine})
+  ResizeController({PixelSmithEngineApi? engine})
     : _engine = engine ?? PixelSmithEngine();
 
-  final PixelSmithEngine _engine;
+  final PixelSmithEngineApi _engine;
 
   final List<PickedImage> _images = <PickedImage>[];
   final Set<String> _selected = <String>{};

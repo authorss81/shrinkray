@@ -1,80 +1,54 @@
 import 'package:flutter/material.dart';
 
 import 'rust/engine.dart';
-import 'rust/models.dart';
+import 'state/resize_controller.dart';
+import 'ui/home_screen.dart';
 
-/// ShrinkRay entry point.
-///
-/// This is a placeholder shell. The engine binding underneath it is real and
-/// tested (`test/ffi_contract_test.dart`, `test/models_test.dart`); the UI
-/// phases build on top of [PixelSmithEngine], they do not re-prove it.
 void main() {
   runApp(const ShrinkRayApp());
 }
 
-class ShrinkRayApp extends StatelessWidget {
-  const ShrinkRayApp({super.key});
+/// The application.
+///
+/// The engine is created once here and handed to the controller, rather than the
+/// controller creating its own. That is what lets a test inject a fake: the
+/// constructor takes an engine and `runApp` is where the real one appears.
+///
+/// Every screen takes the controller as a parameter rather than reaching for a
+/// provider. With one controller and one screen tree that is less machinery, and
+/// a test can construct any screen without standing up a provider tree.
+class ShrinkRayApp extends StatefulWidget {
+  const ShrinkRayApp({super.key, this.engine});
+
+  /// Overridden by tests. Null in the real app, where the controller builds the
+  /// default engine.
+  final PixelSmithEngine? engine;
+
+  @override
+  State<ShrinkRayApp> createState() => _ShrinkRayAppState();
+}
+
+class _ShrinkRayAppState extends State<ShrinkRayApp> {
+  late final ResizeController _controller = ResizeController(
+    engine: widget.engine,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ShrinkRay',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const EngineProbePage(),
-    );
-  }
-}
-
-/// Shows the engine version reported by the native library.
-///
-/// This page exists so the very first run proves the FFI boundary works
-/// end to end. It is replaced by the real shell in a later UI phase.
-class EngineProbePage extends StatefulWidget {
-  const EngineProbePage({super.key});
-
-  @override
-  State<EngineProbePage> createState() => _EngineProbePageState();
-}
-
-class _EngineProbePageState extends State<EngineProbePage> {
-  late final Future<Capabilities> _capabilities;
-
-  @override
-  void initState() {
-    super.initState();
-    _capabilities = PixelSmithEngine().version();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('ShrinkRay')),
-      body: Center(
-        child: FutureBuilder<Capabilities>(
-          future: _capabilities,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Text(
-                'Engine unreachable:\n${snapshot.error}',
-                textAlign: TextAlign.center,
-              );
-            }
-            if (!snapshot.hasData) {
-              return const CircularProgressIndicator();
-            }
-            final caps = snapshot.data!;
-            return Text(
-              'Engine ${caps.version}\n'
-              'WebP lossy: ${caps.webpLossy}\n'
-              'AVIF encode: ${caps.avifEncode}',
-              textAlign: TextAlign.center,
-            );
-          },
-        ),
-      ),
+      home: HomeScreen(controller: _controller),
     );
   }
 }
