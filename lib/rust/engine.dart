@@ -53,8 +53,19 @@ final class PixelSmithEngine {
 
   /// Inspect a file's header without decoding pixels. Rejects a hostile file
   /// before a pixel buffer is allocated.
-  Future<ValidateReport> inspect(List<int> bytes) =>
-      Isolate.run(() => _inspectStatic(bytes));
+  ///
+  /// [mobileLimits] picks the tighter phone profile. The app sets it from the
+  /// device rather than hard-coding it, so a tablet is not held to a phone's
+  /// ceiling.
+  Future<ValidateReport> inspect(List<int> bytes, {bool mobileLimits = false}) =>
+      Isolate.run(() => _inspectStatic((bytes: bytes, mobileLimits: mobileLimits)));
+
+  /// The engine's own view of `PxBuffer`'s layout, from the loaded library.
+  ///
+  /// The contract test compares this against the Dart struct declaration. If the
+  /// engine on disk is a different build from the bindings in the app, this is
+  /// where that shows up instead of as corrupted memory at the first decode.
+  Future<AbiLayout> abiLayout() => Isolate.run(() => _abiLayoutStatic());
 
   /// Full EXIF read.
   Future<ExifInfo> exif(List<int> bytes) =>
@@ -139,16 +150,28 @@ Capabilities _versionStatic() {
   return Capabilities.fromJson(_takeJson(px, px.version()));
 }
 
-ValidateReport _inspectStatic(List<int> bytes) {
+ValidateReport _inspectStatic(_InspectArgs args) {
   final px = PxBindings(loadEngineLibrary());
-  final ptr = _copyToNative(bytes);
+  final ptr = _copyToNative(args.bytes);
   try {
     return ValidateReport.fromJson(
-      _takeJson(px, px.inspect(ptr, bytes.length)),
+      _takeJson(px, px.inspect(ptr, args.bytes.length, args.mobileLimits)),
     );
   } finally {
     _freeNative(ptr);
   }
+}
+
+/// Arguments for `px_inspect`, as a plain record so it can cross an isolate.
+///
+/// `Isolate.run` only accepts static entry points, and a closure cannot capture
+/// instance state, so the payload is built on the calling isolate and sent as
+/// one value. A record of primitives is sendable; a closure is not.
+typedef _InspectArgs = ({List<int> bytes, bool mobileLimits});
+
+AbiLayout _abiLayoutStatic() {
+  final px = PxBindings(loadEngineLibrary());
+  return AbiLayout.fromJson(_takeJson(px, px.abiLayout()));
 }
 
 ExifInfo _exifStatic(List<int> bytes) {

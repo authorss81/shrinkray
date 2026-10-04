@@ -481,3 +481,76 @@ final class BatchFile {
   final String name;
   final List<int> bytes;
 }
+
+/// The engine's own report of a struct's memory layout, from the library that
+/// actually got loaded.
+///
+/// Read by `ffi_contract_test.dart` and compared against [PxBuffer]'s Dart
+/// declaration. It exists so a mismatch between the app's bindings and the engine
+/// binary on disk is a failed test rather than corrupted memory during a decode:
+/// `PxBuffer` is passed by value, so a wrong offset reads a pointer out of the
+/// wrong place and hands it to `free`.
+final class AbiLayout {
+  const AbiLayout({
+    required this.name,
+    required this.size,
+    required this.align,
+    required this.fields,
+  });
+
+  final String name;
+
+  /// Total size in bytes.
+  final int size;
+
+  /// Required alignment in bytes.
+  final int align;
+
+  final List<AbiField> fields;
+
+  /// The offset of [field], or null when the engine does not report it.
+  ///
+  /// Named lookup rather than positional access, so a field the engine adds later
+  /// does not shift every index in the caller.
+  int? offsetOf(String field) {
+    for (final f in fields) {
+      if (f.name == field) return f.offset;
+    }
+    return null;
+  }
+
+  factory AbiLayout.fromJson(Map<String, Object?> json) => AbiLayout(
+    name: json['name'] as String? ?? 'PxBuffer',
+    size: (json['size'] as num?)?.toInt() ?? 0,
+    align: (json['align'] as num?)?.toInt() ?? 0,
+    fields: ((json['fields'] as List?) ?? const [])
+        .map((e) => AbiField.fromJson((e as Map).cast<String, Object?>()))
+        .toList(),
+  );
+
+  @override
+  String toString() =>
+      'AbiLayout($name, size $size, align $align, ${fields.length} fields)';
+}
+
+/// One field within an [AbiLayout].
+final class AbiField {
+  const AbiField({
+    required this.name,
+    required this.offset,
+    required this.size,
+  });
+
+  final String name;
+  final int offset;
+  final int size;
+
+  factory AbiField.fromJson(Map<String, Object?> json) => AbiField(
+    name: json['name'] as String? ?? '?',
+    offset: (json['offset'] as num?)?.toInt() ?? -1,
+    size: (json['size'] as num?)?.toInt() ?? 0,
+  );
+
+  @override
+  String toString() => '$name@$offset+$size';
+}

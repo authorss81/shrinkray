@@ -56,8 +56,8 @@ final class PxBindings {
       >('px_string_free');
   late final _pxInspect = _lib
       .lookupFunction<
-        PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size),
-        PxBuffer Function(ffi.Pointer<ffi.Uint8>, int)
+        PxBuffer Function(ffi.Pointer<ffi.Uint8>, ffi.Size, ffi.Bool),
+        PxBuffer Function(ffi.Pointer<ffi.Uint8>, int, bool)
       >('px_inspect');
   late final _pxExif = _lib
       .lookupFunction<
@@ -100,10 +100,27 @@ final class PxBindings {
         'px_selftest_panic',
       );
 
+  /// Reports the real offsets of `PxBuffer` from the loaded library.
+  ///
+  /// Exists so the struct declaration above is checked against the engine that
+  /// actually got loaded rather than against offsets somebody typed. A mismatch
+  /// here is silent memory corruption, so `ffi_contract_test.dart` compares the
+  /// two and fails.
+  late final _pxAbiLayout = _lib
+      .lookupFunction<PxBuffer Function(), PxBuffer Function()>(
+        'px_abi_layout',
+      );
+
   PxBuffer version() => _pxVersion();
   void bufferFree(PxBuffer b) => _pxBufferFree(b);
   void stringFree(ffi.Pointer<ffi.Char> s) => _pxStringFree(s);
-  PxBuffer inspect(ffi.Pointer<ffi.Uint8> p, int len) => _pxInspect(p, len);
+
+  /// [mobileLimits] selects the tighter phone profile: 40 MP and 16,000 px per
+  /// side, against the desktop default of 128 MP and 30,000.
+  PxBuffer inspect(ffi.Pointer<ffi.Uint8> p, int len, bool mobileLimits) =>
+      _pxInspect(p, len, mobileLimits);
+
+  PxBuffer abiLayout() => _pxAbiLayout();
   PxBuffer exif(ffi.Pointer<ffi.Uint8> p, int len) => _pxExif(p, len);
   PxBuffer presets() => _pxPresets();
   PxBuffer process(ffi.Pointer<ffi.Uint8> p, int len) => _pxProcess(p, len);
