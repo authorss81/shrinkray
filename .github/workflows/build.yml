@@ -65,7 +65,9 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: stable
+          # channel alone resolves the latest stable. Passing
+          # flutter-version: stable alongside it breaks version resolution
+          # ("Unable to determine Flutter version").
           channel: stable
           cache: true
 
@@ -129,7 +131,9 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: stable
+          # channel alone resolves the latest stable. Passing
+          # flutter-version: stable alongside it breaks version resolution
+          # ("Unable to determine Flutter version").
           channel: stable
           cache: true
 
