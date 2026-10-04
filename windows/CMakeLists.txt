@@ -87,6 +87,26 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
+# === PixelSmith engine ===
+# The Rust engine is a plain cargo cdylib, not a Flutter plugin, so nothing in
+# the generated plugin rules knows about it. The install rules above cover only
+# the app binary, the Flutter library, icudtl and the AOT library -- a DLL
+# dropped into windows/runner/ is silently ignored, which is why an earlier
+# build produced a bundle that opened and then crashed on first resize.
+#
+# So install it explicitly. The build workflow stages the freshly compiled DLL
+# into windows/runner/ before `flutter build windows`.
+#
+# The EXISTS guard keeps `flutter run` working on a machine that has not built
+# the engine yet: CMake will not fail to configure, and the Dart loader raises a
+# clear "engine not built" error instead.
+set(PIXELSMITH_ENGINE_DLL "${PROJECT_SOURCE_DIR}/runner/pixelsmith_core.dll")
+if(EXISTS "${PIXELSMITH_ENGINE_DLL}")
+  install(FILES "${PIXELSMITH_ENGINE_DLL}"
+    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+    COMPONENT Runtime)
+endif()
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"

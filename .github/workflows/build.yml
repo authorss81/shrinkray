@@ -165,20 +165,45 @@ jobs:
       - name: Verify the EXE and its native library
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path build\windows -Recurse -Filter '*.exe' |
-                 Where-Object { $_.Name -notlike '*flutter*' } |
-                 Select-Object -First 1
-          if (-not $exe) { Write-Output '::error::no EXE produced'; exit 1 }
-          Write-Output "EXE: $($exe.FullName) ($($exe.Length) bytes)"
-          if ($exe.Length -lt 100kb) {
-            Write-Output '::error::EXE is implausibly small — the engine probably did not link'
+          # Look ONLY under runner/Release. A recursive search across
+          # build/windows catches CMake's compiler-detection stub
+          # (CMakeFiles/.../CompilerIdCXX.exe, 15 KB), which reads as an
+          # "implausibly small" app when it is not the app at all.
+          $release = Join-Path (Get-Location) 'build\windows\x64\runner\Release'
+          if (-not (Test-Path $release)) {
+            Write-Output "::error::no Release bundle at $release — flutter build windows produced nothing"
             exit 1
           }
-          $bundle = Split-Path (Split-Path $exe.FullName -Parent) -Parent
-          $dll = Get-ChildItem -Path $bundle -Recurse -Filter 'pixelsmith_core.dll' |
-                 Select-Object -First 1
-          if (-not $dll) {
-            Write-Output '::error::pixelsmith_core.dll is not in the bundle'
+          $exe = Join-Path $release 'shrinkray.exe'
+          if (-not (Test-Path $exe)) {
+            Write-Output "::error::no shrinkray.exe in $release"
+            Get-ChildItem $release -Filter '*.exe' | ForEach-Object { Write-Output "  found: $($_.Name)" }
             exit 1
           }
-          Write-Output "OK: engine DLL at $($dll.FullName)"
+          # A Flutter release EXE is legitimately small (~90 KB): the Dart AOT
+          # snapshot ships separately as data/app.so. Only a floor is
+          # meaningful here, to catch a truncated or stub binary.
+          $exeSize = (Get-Item $exe).Length
+          Write-Output "EXE: $exe ($exeSize bytes)"
+          if ($exeSize -lt 40kb) {
+            Write-Output "::error::EXE is $exeSize bytes - truncated or not a real Flutter binary"
+            exit 1
+          }
+          # Prove it is a real Flutter bundle rather than a bare executable.
+          if (-not (Test-Path (Join-Path $release 'data\flutter_assets'))) {
+            Write-Output '::error::data/flutter_assets missing - this is not a Flutter bundle'
+            exit 1
+          }
+          # The engine must ship inside the bundle. A missing DLL means the app
+          # opens fine and then throws on the first resize, so this is the check
+          # that actually matters.
+          $dll = Join-Path $release 'pixelsmith_core.dll'
+          if (-not (Test-Path $dll)) {
+            Write-Output '::error::pixelsmith_core.dll is not in the bundle - the app would crash on first resize'
+            Write-Output 'listing:'
+            Get-ChildItem $release -Recurse -Filter '*.dll' | ForEach-Object { Write-Output "  $($_.FullName)" }
+            exit 1
+          }
+          Write-Output "OK: engine DLL at $dll ($((Get-Item $dll).Length) bytes)"
+          $total = (Get-ChildItem $release -Recurse -File | Measure-Object Length -Sum).Sum
+          Write-Output "OK: bundle total $([math]::Round($total / 1MB, 1)) MB"
