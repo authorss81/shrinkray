@@ -32,13 +32,36 @@ subprojects {
 //
 // 36 is the highest API any current dependency needs. Lowering it re-breaks the
 // same check; raising it is the move when a future plugin asks for more.
+// Force every plugin module to compile against API 36.
+//
+// Each Gradle module carries its own `compileSdk`, so pinning only the app is not
+// enough: `flutter_plugin_android_lifecycle` declares that its callers compile
+// against 36, and Gradle's AAR metadata check fails `:file_picker`'s own
+// `checkReleaseAarMetadata` before the app is even considered. The message names
+// the plugin, not this app, which makes it look like an upstream bug.
+//
+// Two things that this has to get right, both learned the hard way:
+//
+// * `afterEvaluate`, not `plugins.withId`. A withId callback runs the moment the
+//   plugin is applied, before the module's own script reaches its
+//   `android { compileSdk 34 }` line - so the override is applied and then
+//   silently overwritten. Run 37200193147 failed with byte-identical output to
+//   the run before it, which is what made that look like the fix doing nothing.
+//
+// * Dynamic dispatch, not a named AGP class. This project is on AGP 9, where
+//   `com.android.build.gradle.LibraryExtension` and `AppExtension` no longer
+//   exist; naming either is a script compilation error (run 37200790505). Every
+//   AGP version exposes `compileSdk` as a property on the `android` extension, so
+//   setting it through the property map needs no class on the classpath at all.
+//
+// 36 is the highest API any current dependency needs. Lowering it re-breaks the
+// same check; raising it is the move when a future plugin asks for more.
 subprojects {
     afterEvaluate {
-        extensions.findByName("android")?.let { extension ->
-            when (extension) {
-                is com.android.build.gradle.LibraryExtension -> extension.compileSdk = 36
-                is com.android.build.gradle.AppExtension -> extension.compileSdk = 36
-            }
+        extensions.findByName("android")?.let { android ->
+            android.javaClass.methods
+                .firstOrNull { it.name == "setCompileSdk" && it.parameterCount == 1 }
+                ?.invoke(android, 36)
         }
     }
 }
