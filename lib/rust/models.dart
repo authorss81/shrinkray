@@ -14,12 +14,54 @@ enum OutputFormat {
   tiff,
   bmp,
   ico,
-  avif;
+  avif,
+  heic,
+  heif;
 
   String toJson() => name;
 
-  static OutputFormat fromJson(String value) =>
-      OutputFormat.values.byName(value.toLowerCase());
+  /// Parses an engine-reported format name.
+  ///
+  /// Throws [FormatException] on an unknown name rather than returning null: the
+  /// engine is a separate build from this Dart, so an unknown value means the two
+  /// disagree, and silently treating it as "no format" would report a real photo
+  /// as unreadable. That is the phase-06 failure mode, where a HEIC the engine
+  /// could open arrived here and found no enum member.
+  static OutputFormat fromJson(String value) {
+    final name = value.toLowerCase();
+    for (final format in OutputFormat.values) {
+      if (format.name == name) return format;
+    }
+    throw FormatException(
+      'the engine reported an unknown output format: $value. This build of the '
+      'app does not know it, which means the engine and the app are different '
+      'versions.',
+    );
+  }
+
+  /// Whether this engine can *write* the format.
+  ///
+  /// A property of the format rather than of the build, and deliberately
+  /// conservative: HEIC and HEIF are read-only in this engine because there is no
+  /// HEVC encoder in the tree. The build-specific half is
+  /// [Capabilities], which knows whether lossy WebP and AVIF are compiled in.
+  bool get isWritable => switch (this) {
+    OutputFormat.heic || OutputFormat.heif => false,
+    _ => true,
+  };
+
+  /// Whether a quality slider changes the output.
+  ///
+  /// False for lossless formats: showing a slider that provably cannot affect the
+  /// result is a control that lies about what it does.
+  bool get hasQuality => switch (this) {
+    OutputFormat.png ||
+    OutputFormat.gif ||
+    OutputFormat.tiff ||
+    OutputFormat.bmp ||
+    OutputFormat.ico => false,
+    _ => true,
+  };
 }
 
 /// How the source image fills the requested box.
@@ -390,29 +432,75 @@ final class BatchReport {
 }
 
 /// Engine capabilities. Mirrors `Capabilities` in `core/src/lib.rs`.
+///
+/// Every encode flag the engine reports is carried, not a convenient subset.
+/// The format picker asks this object what the build can do, so a field left out
+/// here is a format the UI either hides wrongly or offers and cannot write.
+///
+/// Encode and decode are separate on purpose for AVIF and HEIC: this build writes
+/// AVIF but cannot read it back, and one boolean for both directions would tell a
+/// user we could open the file we just produced.
 final class Capabilities {
   const Capabilities({
     required this.version,
+    required this.jpeg,
+    required this.png,
     required this.webpLossy,
+    required this.webpLossless,
     required this.avifEncode,
+    required this.avifDecode,
+    required this.heicDecode,
+    required this.jpegProgressive,
+    required this.jpegChromaSubsampling,
+    required this.gif,
+    required this.tiff,
+    required this.bmp,
+    required this.ico,
     required this.maxInputBytes,
     required this.maxPixels,
   });
 
   final String version;
+  final bool jpeg;
+  final bool png;
   final bool webpLossy;
+  final bool webpLossless;
   final bool avifEncode;
+  final bool avifDecode;
+  final bool heicDecode;
+  final bool jpegProgressive;
+  final bool jpegChromaSubsampling;
+  final bool gif;
+  final bool tiff;
+  final bool bmp;
+  final bool ico;
   final int maxInputBytes;
   final int maxPixels;
 
   static Capabilities fromJson(Map<String, Object?> json) {
     final caps = (json['capabilities'] as Map).cast<String, Object?>();
+    // Read a bool defensively rather than with `as bool`. The engine is a
+    // separate build from this Dart, so a field added there and not here would
+    // otherwise throw a cast error and take down the whole capability read -
+    // which is what would grey out every format with no explanation.
+    bool flag(String key) => caps[key] as bool? ?? false;
     return Capabilities(
       version: json['version'] as String,
-      webpLossy: caps['webp_lossy'] as bool,
-      avifEncode: caps['avif_encode'] as bool,
-      maxInputBytes: (caps['max_input_bytes'] as num).toInt(),
-      maxPixels: (caps['max_pixels'] as num).toInt(),
+      jpeg: flag('jpeg'),
+      png: flag('png'),
+      webpLossy: flag('webp_lossy'),
+      webpLossless: flag('webp_lossless'),
+      avifEncode: flag('avif_encode'),
+      avifDecode: flag('avif_decode'),
+      heicDecode: flag('heic_decode'),
+      jpegProgressive: flag('jpeg_progressive'),
+      jpegChromaSubsampling: flag('jpeg_chroma_subsampling'),
+      gif: flag('gif'),
+      tiff: flag('tiff'),
+      bmp: flag('bmp'),
+      ico: flag('ico'),
+      maxInputBytes: (caps['max_input_bytes'] as num?)?.toInt() ?? 0,
+      maxPixels: (caps['max_pixels'] as num?)?.toInt() ?? 0,
     );
   }
 }
